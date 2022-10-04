@@ -66,32 +66,30 @@ func monitorModSockets() {
 
 func monitorInternalModsocket() {
 
-	working := checkModSocketConnection(ModsocketUrl)
+	working := checkModSocketConnection("wss", ModsocketUrl)
 
 	if working {
-		log.Debug().Msg("modsocket is working")
 		successfullInternalModsocketConnections.Inc()
 	} else {
-		log.Warn().Msg("modsocket connection failed")
+		log.Warn().Msg("modsocket internal connection failed")
 		failedInternalModsocketConnections.Inc()
 	}
 }
 
 func monitorExternalModsocket() {
 
-	working := checkModSocketConnection(internalModSocket())
+	working := checkModSocketConnection("ws", internalModSocket())
 
 	if working {
-		log.Debug().Msg("modsocket is working")
 		successfullModsocketConnections.Inc()
 	} else {
-		log.Warn().Msg("modsocket connection failed")
+		log.Warn().Msg("modsocket external connection failed")
 		failedModsocketConnections.Inc()
 	}
 }
 
-func checkModSocketConnection(host string) bool {
-	u := url.URL{Scheme: "wss", Host: host, Path: "/modsocket"}
+func checkModSocketConnection(scheme, host string) bool {
+	u := url.URL{Scheme: scheme, Host: host, Path: "/modsocket"}
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
