@@ -6,6 +6,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog/log"
 	"net/url"
+	"os"
+	"sync"
 	"time"
 )
 
@@ -23,27 +25,73 @@ var (
 		Name: "failed_modsocket_connections",
 		Help: "The total number of failed modsocket connections",
 	})
+
+	successfullInternalModsocketConnections = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "successfull_internal_modsocket_connections",
+		Help: "The total number of successfull internal modsocket connections",
+	})
+
+	failedInternalModsocketConnections = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "failed_internal_modsocket_connections",
+		Help: "The total number of failed internal modsocket connections",
+	})
 )
 
-func monitorModSocket() {
+func startMonitoring() {
 	for {
-		working := checkModSocketConnection()
 
-		if working {
-			log.Debug().Msg("modsocket is working")
-			successfullModsocketConnections.Inc()
-		} else {
-			log.Warn().Msg("modsocket connection failed")
-			failedModsocketConnections.Inc()
-		}
+		monitorModSockets()
 
 		// wait 10 seconds
 		time.Sleep(10 * time.Second)
 	}
 }
 
-func checkModSocketConnection() bool {
-	u := url.URL{Scheme: "wss", Host: ModsocketUrl, Path: "/modsocket"}
+func monitorModSockets() {
+	wg := sync.WaitGroup{}
+
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		monitorInternalModsocket()
+	}()
+	go func() {
+		defer wg.Done()
+		monitorExternalModsocket()
+	}()
+
+	wg.Wait()
+}
+
+func monitorInternalModsocket() {
+
+	working := checkModSocketConnection(ModsocketUrl)
+
+	if working {
+		log.Debug().Msg("modsocket is working")
+		successfullInternalModsocketConnections.Inc()
+	} else {
+		log.Warn().Msg("modsocket connection failed")
+		failedInternalModsocketConnections.Inc()
+	}
+}
+
+func monitorExternalModsocket() {
+
+	working := checkModSocketConnection(internalModSocket())
+
+	if working {
+		log.Debug().Msg("modsocket is working")
+		successfullModsocketConnections.Inc()
+	} else {
+		log.Warn().Msg("modsocket connection failed")
+		failedModsocketConnections.Inc()
+	}
+}
+
+func checkModSocketConnection(host string) bool {
+	u := url.URL{Scheme: "wss", Host: host, Path: "/modsocket"}
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
@@ -59,4 +107,12 @@ func checkModSocketConnection() bool {
 	}
 
 	return true
+}
+
+func internalModSocket() string {
+	v := os.Getenv("MODSOCKET_INTERNAL_URL")
+	if v == "" {
+		log.Panic().Msgf("MODSOCKET_INTERNAL_URL is not set")
+	}
+	return v
 }
