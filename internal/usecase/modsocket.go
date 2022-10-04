@@ -66,7 +66,7 @@ func monitorModSockets() {
 
 func monitorInternalModsocket() {
 
-	working := checkModSocketConnection("wss", ModsocketUrl)
+	working := checkModSocketConnection("ws", ModsocketUrl)
 
 	if working {
 		successfullInternalModsocketConnections.Inc()
@@ -78,7 +78,7 @@ func monitorInternalModsocket() {
 
 func monitorExternalModsocket() {
 
-	working := checkModSocketConnection("ws", internalModSocket())
+	working := checkModSocketConnection("wss", internalModSocket())
 
 	if working {
 		successfullModsocketConnections.Inc()
