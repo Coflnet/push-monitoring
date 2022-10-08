@@ -93,7 +93,7 @@ func checkModSocketConnection(scheme, host string) bool {
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to connect to modsocket")
+		log.Error().Err(err).Msgf("failed to connect to modsocket: %s", host)
 		return false
 	}
 
